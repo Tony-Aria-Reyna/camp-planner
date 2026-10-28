@@ -1,7 +1,7 @@
 // NZ Camp Planner — offline support.
 // The app itself and Leaflet are kept for offline use; map tiles you have looked at are kept too (up to ~2,500),
 // so areas you browsed before a trip still show with no signal. Campsite data lives inside index.html.
-const VERSION = 'nzcamp-2026-10-28';
+const VERSION = 'nzcamp-2026-10-29';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png',
   'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css',
   'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js'];
