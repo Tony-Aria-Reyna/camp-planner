@@ -218,6 +218,14 @@
   #live .lv-prof { margin-top:8px; cursor:default; } #live.min .lv-m, #live.min .lv-prof { display:none; }
   .card.today { background:#E8F1FB; border-left-color:#1E88E5; }
   body.compact #live { left:6px; right:6px; width:auto; bottom:6px; max-height:55%; } body.compact #live .lv-h select { font-size:16px; }
+  #inst { display:none; position:fixed; z-index:5500; right:16px; bottom:16px; width:min(380px, calc(100vw - 32px)); background:#fff; border-radius:8px; border-top:4px solid var(--gold); box-shadow:0 6px 24px rgba(0,0,0,.35); padding:12px 14px; }
+  #inst.show { display:block; } #inst .ix { position:absolute; top:6px; right:6px; border:none; background:none; font-size:16px; color:#888; min-width:36px; min-height:36px; cursor:pointer; }
+  .inst-card .ih { display:flex; align-items:center; gap:10px; padding-right:26px; } .inst-card .ih b { font-size:15px; line-height:1.25; }
+  .inst-card .ib { font-size:13px; line-height:1.5; margin-top:6px; } .inst-card .shr { vertical-align:-3px; }
+  .inst-card .ibt { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; } .inst-card .ibt .btn { flex:1 1 auto; }
+  .inst-card .iqr canvas { display:block; margin:8px auto 0; width:150px; height:150px; image-rendering:pixelated; }
+  #mbox .inst-card { background:var(--lgold); border-left:4px solid var(--gold); border-radius:4px; padding:10px; margin:8px 0; }
+  body.compact #inst { left:8px; right:8px; width:auto; bottom:calc(68px + env(safe-area-inset-bottom)); }
   #fsbtn, #mtop, #mtabs, #sheetbar { display:none; }
   /* phone */
   body.compact #app { position:fixed; inset:0; height:auto; display:block; overflow:hidden; }
@@ -2130,6 +2138,7 @@ window.addEventListener('resize', ()=>{ cancelAnimationFrame(_asT); _asT=request
 function showWelcome(){
   showModal(`<div style="display:flex;gap:12px;align-items:center"><svg width="56" height="56"><use href="#logo"/></svg><div><div class="hint" style="margin:0;color:var(--brown);font-weight:bold;text-transform:uppercase;font-size:11px">Kia ora</div><h3 style="font-size:20px">Welcome to NZ Camp Planner</h3></div></div>
   <p style="font-size:14px;line-height:1.5">Find campsites, plan walks the kids can manage, and turn it all into a trip plan you can print or send.</p>
+  ${instWanted(true) && isPhoneish() ? instCard('wl') : ''}
   <div class="wl-steps">
     <div><i>1</i><span><b>Find</b> — ${SITES.length.toLocaleString()} campsites from DOC, Auckland Council and OpenStreetMap. Filter by beach, hot showers, price, dogs, tents… or tap ◎ Near me.</span></div>
     <div><i>2</i><span><b>Shortlist</b> — tap a site on the map, then <b>＋ Shortlist</b>. Tick ✓ Been, ★ Favourite or ⚑ To try as you go.</span></div>
@@ -2138,11 +2147,13 @@ function showWelcome(){
     <div><i>5</i><span><b>Remember it</b> — log each stay with photos in 4 · Journal and watch your map fill up.</span></div>
   </div>
   <div class="hint">Everything you enter is saved in this browser on this device. To move it to your phone, use 6 · Data → transfer code. Tap <b>?</b> at the top any time to see this again.</div>
-  <div class="btns"><button class="btn dark" type="button" id="wlSample">Show me a sample trip</button><button class="btn" type="button" id="wlGo">Start exploring</button><button class="btn ghost wide" type="button" id="wlAbout">About the data and safety</button></div>`);
+  <div class="btns"><button class="btn dark" type="button" id="wlSample">Show me a sample trip</button><button class="btn" type="button" id="wlGo">Start exploring</button><button class="btn ghost" type="button" id="wlAbout">About the data and safety</button>${/^https?:$/.test(location.protocol)&&!isStandalone()?'<button class="btn ghost" type="button" id="wlInstall">📲 Add to home screen</button>':''}</div>`);
   const done=()=>{ S.seen=true; persist(); };
+  bindInst($('mbox'));
   $('wlSample').onclick=()=>{ done(); sampleTrip(); };
   $('wlGo').onclick=()=>{ done(); closeModal(); if(!COMPACT) openTab('find'); };
   $('wlAbout').onclick=()=>{ done(); showAbout(); };
+  const wi=$('wlInstall'); if(wi) wi.onclick=()=>{ done(); instShow(true); };
 }
 function showAbout(){
   const at=(window.SEED&&window.SEED.at)||'';
@@ -2161,8 +2172,8 @@ function showAbout(){
   <p style="font-size:13px;line-height:1.5">This planner is a guide, not an authority. Prices, facilities, closures and track conditions change — always check the DOC or council page and the forecast before you go, and tell someone your plans. In an emergency call <b>111</b> and ask for Police.</p>
   <h2>Your privacy</h2>
   <p style="font-size:13px;line-height:1.5">Your sites, trips, routes, journal and photos stay in this browser. The planner only sends map positions to the services above to draw maps, follow tracks, find heights and search places.</p>
-  <div class="btns"><button class="btn ghost" type="button" id="abWl">Show the welcome guide</button><button class="btn" type="button" data-close>Close</button></div>`);
-  $('abWl').onclick=showWelcome;
+  <div class="btns"><button class="btn ghost" type="button" id="abWl">Show the welcome guide</button>${/^https?:$/.test(location.protocol)&&!isStandalone()?'<button class="btn ghost" type="button" id="abInst">📲 Add to home screen</button>':''}<button class="btn" type="button" data-close>Close</button></div>`);
+  $('abWl').onclick=showWelcome; const ai=$('abInst'); if(ai) ai.onclick=()=>instShow(true);
 }
 $('helpD').onclick=$('helpM').onclick=showWelcome;
 
@@ -2173,6 +2184,45 @@ if(/^https?:$/.test(location.protocol)){
   if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
 }
 
+// ---------- add to home screen: offered automatically when the planner is opened from its web address ----------
+const INST={evt:null, key:KEY+':inst'};
+const UA=navigator.userAgent||'';
+const isIOS=/iPhone|iPad|iPod/.test(UA) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
+const isAndroid=/Android/i.test(UA);
+const inApp=/FBAN|FBAV|FB_IAB|Instagram|Messenger|MicroMessenger|Snapchat|LinkedInApp|Line\//.test(UA);
+const isStandalone=()=>{ try{ return matchMedia('(display-mode: standalone)').matches || navigator.standalone===true; }catch(e){ return false; } };
+const isPhoneish=()=>isIOS || isAndroid || (matchMedia('(pointer:coarse)').matches && innerWidth<900);
+const appUrl=()=>location.origin+location.pathname;
+function instSnoozed(){ try{ const v=JSON.parse(localStorage.getItem(INST.key)||'null'); return !!v && (v.never || Date.now()<v.until); }catch(e){ return false; } }
+function instSnooze(days, never){ try{ localStorage.setItem(INST.key, JSON.stringify({until:Date.now()+days*864e5, never:!!never})); }catch(e){} }
+function instWanted(force){ return /^https?:$/.test(location.protocol) && !isStandalone() && (force || !instSnoozed()); }
+window.addEventListener('beforeinstallprompt', e=>{ e.preventDefault(); INST.evt=e; if($('inst') && $('inst').classList.contains('show')) instRender(); const wc=$('wlInst'); if(wc) wc.outerHTML=instCard('wl'); bindInst(document); });
+window.addEventListener('appinstalled', ()=>{ INST.evt=null; instHide(); instSnooze(3650, true); toast('Installed — NZ Camp Planner is on your home screen.', 6000); });
+const SHARE_SVG='<svg class="shr" viewBox="0 0 18 22" width="15" height="18" aria-label="Share" role="img"><path d="M9 1v12M5 5l4-4 4 4" fill="none" stroke="#1E88E5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 8H2v13h14V8h-4" fill="none" stroke="#1E88E5" stroke-width="2" stroke-linejoin="round"/></svg>';
+function instContent(){
+  if(inApp) return {t:'Open this in your phone’s browser first', b:`This link has opened inside another app, which can’t add it to your home screen. Tap the <b>⋯</b> or <b>⋮</b> menu and choose <b>Open in ${isIOS?'Safari':'Chrome'}</b> (or <b>Open in browser</b>), then add it from there.`, act:'copy'};
+  if(INST.evt) return {t:isPhoneish()?'Add NZ Camp Planner to your home screen':'Install NZ Camp Planner', b:'It opens full screen like an app, and works offline for the places you have looked at.', act:'install'};
+  if(isIOS) return {t:'Add NZ Camp Planner to your home screen', b:`Tap <b>Share</b> ${SHARE_SVG} — at the bottom of Safari, or inside the <b>⋯</b> menu on newer iPhones — then scroll down and tap <b>Add to Home Screen</b>. It then opens like an app and works offline.`, act:null};
+  if(isAndroid) return {t:'Add NZ Camp Planner to your home screen', b:'Tap the browser menu <b>⋮</b> and choose <b>Install app</b> or <b>Add to Home screen</b>. It then opens like an app and works offline.', act:null};
+  return {t:'Use it on your phone', b:'Scan this with your phone’s camera to open the planner there, then add it to your home screen so it’s ready on the trail.', act:'qr'};
+}
+function instCard(where){ const c=instContent();
+  return `<div class="inst-card" id="${where==='wl'?'wlInst':'instIn'}"><div class="ih"><svg width="34" height="34"><use href="#logo"/></svg><b>${c.t}</b></div><div class="ib">${c.b}</div>${c.act==='qr'?'<div class="iqr" id="instQr"></div>':''}
+    <div class="ibt">${c.act==='install'?'<button class="btn dark" type="button" data-inst="install">📲 Add to home screen</button>':''}${c.act==='copy'?'<button class="btn dark" type="button" data-inst="copy">Copy the link</button>':''}${where==='wl'?'':'<button class="btn ghost" type="button" data-inst="later">Not now</button><button class="btn ghost" type="button" data-inst="never">Don’t ask again</button>'}</div></div>`; }
+function bindInst(root){
+  root.querySelectorAll('[data-inst]').forEach(b=>b.onclick=async()=>{ const a=b.dataset.inst;
+    if(a==='install' && INST.evt){ const e=INST.evt; INST.evt=null; e.prompt(); try{ const r=await e.userChoice; if(r && r.outcome==='accepted'){ instHide(); instSnooze(3650,true); } else { instSnooze(7); instHide(); } }catch(err){} }
+    else if(a==='copy'){ try{ await navigator.clipboard.writeText(appUrl()); toast('Link copied — paste it into Safari or Chrome.'); }catch(err){ showText(appUrl()); } }
+    else if(a==='later'){ instSnooze(14); instHide(); toast('No worries — find it again under ? Help.'); }
+    else if(a==='never'){ instSnooze(3650,true); instHide(); } });
+  const q=root.querySelector('#instQr'); if(q && !q.firstChild) loadScript(LIB.qr).then(()=>{ const qr=qrcode(0,'M'); qr.addData(appUrl()); qr.make(); const n=qr.getModuleCount(), sc=4, cv=document.createElement('canvas'); cv.width=cv.height=(n+8)*sc; const x=cv.getContext('2d'); x.fillStyle='#fff'; x.fillRect(0,0,cv.width,cv.height); x.fillStyle='#25292E'; for(let r=0;r<n;r++) for(let k=0;k<n;k++) if(qr.isDark(r,k)) x.fillRect((k+4)*sc,(r+4)*sc,sc,sc); q.appendChild(cv); }).catch(()=>{ q.innerHTML='<div class="hint">'+esc(appUrl())+'</div>'; });
+}
+function instRender(){ const el=$('inst'); el.innerHTML=instCard('banner')+'<button type="button" class="ix" aria-label="Close" data-inst="later">✕</button>'; bindInst(el); }
+function instShow(force){ if(!instWanted(force)){ if(force) toast(isStandalone()?'It’s already on your home screen — you’re using the app.':'Open the planner from its web address to add it to your home screen.', 5000); return; }
+  let el=$('inst'); if(!el){ el=document.createElement('div'); el.id='inst'; el.setAttribute('role','dialog'); el.setAttribute('aria-label','Add to home screen'); document.body.appendChild(el); }
+  closeModal(); instRender(); el.classList.add('show'); }
+function instHide(){ const el=$('inst'); if(el) el.classList.remove('show'); }
+
 // ---------- boot ----------
 function boot(){
   slopeZoom(); rebuild(); renderFilters(); attrib(); refresh(); renderSets(); renderMine(); srcStat(); drawAreas(); drawFc(); savedNote(); applyMode();
@@ -2182,6 +2232,7 @@ function boot(){
   if(navigator.onLine!==false && stale(DOC.at)) loadDoc(true);
   if(navigator.onLine!==false && !OSM.sites.length) loadOsm('all', true);
   if(!S.seen) setTimeout(showWelcome, 500);
+  else if(instWanted() && (isPhoneish() || INST.evt)) setTimeout(()=>{ if(!$('modal').classList.contains('show')) instShow(); }, 1500);
 }
 // Built-in snapshot: used whenever this browser has no saved copy yet (first open, new phone, after a wipe).
 function useSeed(){
