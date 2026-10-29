@@ -1,6 +1,6 @@
 # NZ Camp Planner
 
-**Open the app: https://tonyandreynanz-max.github.io/camp-planner/**
+**Open the app: https://tony-aria-reyna.github.io/camp-planner/**
 
 Find New Zealand campsites, plan walks the kids can manage, and turn it all into a trip plan you can print or send. On a phone, open the link and choose **Add to Home Screen** — it then works like an app, including offline for map areas you have viewed.
 
@@ -24,6 +24,11 @@ Find New Zealand campsites, plan walks the kids can manage, and turn it all into
 - Trip sheet to print, save as PDF or send — with map, directions, website and phone links throughout
 - Share a single trip with someone by code
 
+**Ready for no signal**
+- 💾 Save maps for a trip: NZ Topo50 (LINZ) around every campsite, car park and walk, so the map works with no coverage
+- One-tap backups (including photos), and a reminder a few days before each trip
+- A per-trip checklist: maps saved, backed up, walk heights loaded, installed on the home screen, trip sheet sent
+
 **On the trail**
 - 📍 Live: where you are, km done and to go, climb left, time left and when you will be back
 - Record your walk — works with the phone locked (gaps are filled along your planned route)
@@ -35,7 +40,7 @@ Everything you enter stays on your own device. Nobody can see anyone else's trip
 
 ## Data
 
-Campsites: Crown Copyright, Department of Conservation Te Papa Atawhai (CC BY 4.0); Auckland Council website; © OpenStreetMap contributors (ODbL). Maps: OpenTopoMap, Esri, OpenStreetMap. Heights: Copernicus via Open-Meteo. Routing: FOSSGIS / OpenStreetMap.
+Campsites: Crown Copyright, Department of Conservation Te Papa Atawhai (CC BY 4.0); Auckland Council website; © OpenStreetMap contributors (ODbL). Maps: NZ Topo50 and aerial imagery © Toitū Te Whenua LINZ (CC BY 4.0); OpenTopoMap, Esri, OpenStreetMap. Heights: Copernicus via Open-Meteo. Routing: FOSSGIS / OpenStreetMap.
 
 Times, grades and campsite details are a guide — check DOC or council alerts and the forecast before you go. Emergency: 111.
 

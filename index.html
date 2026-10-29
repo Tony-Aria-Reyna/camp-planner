@@ -218,6 +218,12 @@
   #live .lv-prof { margin-top:8px; cursor:default; } #live.min .lv-m, #live.min .lv-prof { display:none; }
   .card.today { background:#E8F1FB; border-left-color:#1E88E5; }
   body.compact #live { left:6px; right:6px; width:auto; bottom:6px; max-height:55%; } body.compact #live .lv-h select { font-size:16px; }
+  .ready .rd { display:flex; gap:10px; align-items:flex-start; padding:8px 0; border-bottom:1px dashed var(--line); font-size:13px; }
+  .ready .rk { flex:none; width:26px; height:26px; border-radius:50%; background:#FDE8E8; color:var(--red); font-weight:bold; display:flex; align-items:center; justify-content:center; }
+  .ready .rd.ok .rk { background:#E3F1E4; color:var(--green); }
+  #nudge { display:none; position:fixed; z-index:5500; right:16px; bottom:16px; width:min(380px, calc(100vw - 32px)); background:#fff; border-radius:8px; border-top:4px solid #1E88E5; box-shadow:0 6px 24px rgba(0,0,0,.35); padding:12px 14px; }
+  #nudge.show { display:block; } #nudge .ix { position:absolute; top:6px; right:6px; border:none; background:none; font-size:16px; color:#888; min-width:36px; min-height:36px; cursor:pointer; }
+  body.compact #nudge { left:8px; right:8px; width:auto; bottom:calc(68px + env(safe-area-inset-bottom)); }
   #inst { display:none; position:fixed; z-index:5500; right:16px; bottom:16px; width:min(380px, calc(100vw - 32px)); background:#fff; border-radius:8px; border-top:4px solid var(--gold); box-shadow:0 6px 24px rgba(0,0,0,.35); padding:12px 14px; }
   #inst.show { display:block; } #inst .ix { position:absolute; top:6px; right:6px; border:none; background:none; font-size:16px; color:#888; min-width:36px; min-height:36px; cursor:pointer; }
   .inst-card .ih { display:flex; align-items:center; gap:10px; padding-right:26px; } .inst-card .ih b { font-size:15px; line-height:1.25; }
@@ -364,6 +370,7 @@
 // DOC and OpenStreetMap campsites are cached separately and refreshed live.
 const $ = id => document.getElementById(id);
 const KEY = 'nzcamp:v1', APP = 'nzcamp';
+const APP_URL = 'https://tony-aria-reyna.github.io/camp-planner/';
 const LIB = { qr:'https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js' };
 const FRAMED = (()=>{ try{ return window.self !== window.top; }catch(e){ return true; } })();
 const isCompact = () => window.innerWidth <= 760 || (window.innerHeight <= 520 && matchMedia('(pointer:coarse)').matches);
@@ -446,7 +453,7 @@ const ISLAND = (lat,lon) => lon<0 || lon<170 && lat>-44.5 && lat<-43 ? 'Chatham 
 
 // ---------- state ----------
 const FILT_DEF = () => ({q:'', origin:'', radius:'', sort:'name', types:[], maxA:'', keepUnknown:true, must:[], near:[], dogs:false, tent:false, park:false, nobook:false, hideSC:true, freedom:false, closed:false, status:'all', island:''});
-function defaults(){ return {v:1, my:[], edits:{}, tick:{}, stays:[], trips:[], areas:[], routes:[], myTpl:{}, myMeals:[], hide:{}, filt:FILT_DEF(), set:{names:'', adults:1, children:1, vehicle:'tent', labels:true, price:clone(PRICE_DEF), pace:1, rest:10, follow:true}, base:'topo', over:{}, tab:'find', cur:null, fcOn:false}; }
+function defaults(){ return {v:1, my:[], edits:{}, tick:{}, stays:[], trips:[], areas:[], routes:[], myTpl:{}, myMeals:[], offMaps:{}, bk:null, hide:{}, filt:FILT_DEF(), set:{names:'', adults:1, children:1, vehicle:'tent', labels:true, price:clone(PRICE_DEF), pace:1, rest:10, follow:true}, base:'topo', over:{}, tab:'find', cur:null, fcOn:false}; }
 function loadState(){ if(!STORE_OK) return null; try{ return JSON.parse(localStorage.getItem(KEY)); }catch(e){ return null; } }
 let S = loadState() || defaults();
 function migrate(){
@@ -678,7 +685,7 @@ Object.keys(BASES).forEach(k=>{ const b=BASES[k]; baseLayers[b.name]=L.tileLayer
 Object.keys(OVER).forEach(k=>{ const o=OVER[k]; overLayers[o.name]=L.tileLayer(o.url, {maxZoom:19, maxNativeZoom:o.max, opacity:o.opacity}); overLayers[o.name]._key=k; });
 (baseLayers[(BASES[S.base]||BASES.topo).name]).addTo(map);
 Object.keys(overLayers).forEach(n=>{ if(S.over[overLayers[n]._key]) overLayers[n].addTo(map); });
-L.control.layers(baseLayers, overLayers, {position:'topright', collapsed:true}).addTo(map);
+const layerCtl=L.control.layers(baseLayers, overLayers, {position:'topright', collapsed:true}).addTo(map);
 map.on('baselayerchange', e=>{ S.base=e.layer._key; persist(); });
 map.on('overlayadd overlayremove', e=>{ if(e.layer._key){ S.over[e.layer._key]=(e.type==='overlayadd'); persist(); } });
 const ATTR={doc:'Campsites: Crown Copyright, Department of Conservation Te Papa Atawhai (CC BY 4.0)', osm:'Campsites © OpenStreetMap contributors (ODbL)'};
@@ -1569,6 +1576,8 @@ function renderTrips(){
   h+=lab('Start point','Where you set off from — usually home. Used for drive times.', '', 1)+`<div class="hint">${t.start?'📍 '+esc(t.start.label||'')+' ('+f5(t.start.lat)+', '+f5(t.start.lon)+')':'Not set yet.'}</div><div class="btns"><button class="btn ghost" type="button" id="tsMe">◎ My location</button><button class="btn ghost" type="button" id="tsPick">📍 Tap the map</button><button class="btn ghost wide" type="button" id="tsPlace">⌕ Search a town</button></div>`;
   if(t.days.length) h+=`<div class="card ok" style="margin-top:10px"><b>${t.days.length} day${t.days.length>1?'s':''}, ${n} night${n===1?'':'s'}</b><br>🚗 Driving ${tt.guess?'about ':''}${minTxt(tt.dmin)} (${Math.round(tt.dkm)} km)<br>⛺ Camp fees ${n?(tt.fees[1]?rangeMoney(tt.fees)+(tt.part?' + child fees':''):'')+(tt.unk?(tt.fees[1]?' + ':'')+tt.unk+' night'+(tt.unk>1?'s':'')+' price unknown':''):'none'}${!tt.fees[1]&&!tt.unk&&n?'Free':''}<br>🥾 ${tt.nW?tt.nW+' walk'+(tt.nW>1?'s':'')+', '+tt.wkm.toFixed(1)+' km, about '+hrsTxt(tt.whrs)+' for '+esc((WALKERS.find(w=>w.k===t.young)||{}).t||'')+(tt.hardest>=0?' — hardest: <b style="color:'+GRADES[tt.hardest][1]+'">'+GRADES[tt.hardest][0]+'</b>':''):'No walks planned yet'}</div>`;
   h+=missHtml('Still to do for this trip', miss);
+  if(t.days.length){ const RR=readiness(t), rn=RR.filter(x=>x.ok).length, soonT=t.from && nights(today(), t.from)<=7 && t.to>=today(); if(soonT && rn<RR.length) TRIP_OPEN.add('ready');
+    h+=sec('ready', (rn===RR.length?'✓ ':'')+'Ready for no signal', rn+'/'+RR.length, readyHtml(t)); }
   // shortlist
   let sl=''; if(!t.list.length) sl+='<div class="hint">Find sites in 1 · Find or on the map, then tap <b>＋ Shortlist</b> in the popup.</div>';
   sl+=`<ul class="tlist">${t.list.map((id,i)=>{ const s=BYID[id]; if(!s) return `<li><div class="top"><b>Site no longer loaded</b><span class="ctl"><button type="button" data-tx="${i}" aria-label="Remove">✕</button></span></div></li>`;
@@ -1708,6 +1717,7 @@ function bindTrips(){
   B.querySelectorAll('[data-chk]').forEach(c=>c.onchange=()=>{ t.checks[c.dataset.chk]=c.checked; save(); renderTrips(); });
   // actions
   $('tSheet').onclick=()=>showSheet(t);
+  bindReady(B, t);
   B.querySelectorAll('[data-tdlive]').forEach(b=>b.onclick=()=>{ const r=S.routes.find(x=>x.id===b.dataset.tdlive); if(r) fitRoute(r); startLive(b.dataset.tdlive); });
   const tl=$('tdLive'); if(tl) tl.onclick=()=>startLive();
   $('tShare').onclick=()=>shareTrip(t);
@@ -1781,7 +1791,7 @@ function sheetHtml(t){
   if(t.lists.length){ h+=`<h2>Checklists</h2>`; t.lists.forEach(l=>{ h+=`<h3>${esc(l.name)}</h3><div class="sh-cols">${l.groups.map(g=>`<div class="sh-g">${g.name?`<b>${esc(g.name)}</b>`:''}${g.items.map(x=>`<div>${x.d?'☑':'☐'} ${esc(x.n)}${x.q?' — '+esc(scaleTxt(x.q, listF(t,l))):''}</div>`).join('')}</div>`).join('')}</div>`; }); }
   if(t.meals.length){ h+=`<h2>Meal plan — ${portTxt(portions(t))} portions</h2>`+t.meals.map(m=>`<div class="sh-meal"><b>${esc(m.when)}: ${esc(m.dish)}</b>${m.ing&&m.ing.length?'<br><i>'+m.ing.map(x=>esc(scaleTxt(x,mealF(t,m)))).join(' · ')+'</i>':''}${m.kit?'<br>Gear: '+esc(m.kit):''}${m.steps&&m.steps.length?'<ol>'+m.steps.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ol>':''}</div>`).join(''); }
   if(t.notes) h+=`<h2>Notes</h2><p>${esc(t.notes)}</p>`;
-  h+=`<p class="sh-small">Made with <a href="https://tonyandreynanz-max.github.io/camp-planner/">NZ Camp Planner</a> on ${esc(fmtDate(today()))}. Campsite details: DOC (CC BY 4.0), Auckland Council website, OpenStreetMap contributors. Times and grades are estimates — check conditions and campsite alerts before you go.</p>`;
+  h+=`<p class="sh-small">Made with <a href="${APP_URL}">NZ Camp Planner</a> on ${esc(fmtDate(today()))}. Campsite details: DOC (CC BY 4.0), Auckland Council website, OpenStreetMap contributors. Times and grades are estimates — check conditions and campsite alerts before you go.</p>`;
   return h;
 }
 const SHEET_CSS=`.sheet-in{max-width:820px;margin:0 auto;padding:18px;font:13px/1.45 Arial,sans-serif;color:#25292E;background:#fff}
@@ -2017,7 +2027,7 @@ function scopeList(sc){ if(sc==='all') return SITES; if(sc==='mine') return SITE
 function b64u(u8){ let s=''; for(let i=0;i<u8.length;i+=0x8000) s+=String.fromCharCode.apply(null, u8.subarray(i,i+0x8000)); return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
 function unb64u(t){ t=t.replace(/-/g,'+').replace(/_/g,'/'); while(t.length%4) t+='='; const s=atob(t), u=new Uint8Array(s.length); for(let i=0;i<s.length;i++) u[i]=s.charCodeAt(i); return u; }
 const pipe=(u8,stream)=>new Response(new Blob([u8]).stream().pipeThrough(stream)).arrayBuffer().then(b=>new Uint8Array(b));
-function payload(){ const c=JSON.parse(JSON.stringify(S, (k,v)=>k && k[0]==='_' ? undefined : v)); delete c._saved; delete c.tab; return {app:APP, v:1, at:new Date().toISOString(), state:c}; }
+function payload(){ const c=JSON.parse(JSON.stringify(S, (k,v)=>k && k[0]==='_' ? undefined : v)); delete c.offMaps; delete c.bk; delete c._saved; delete c.tab; return {app:APP, v:1, at:new Date().toISOString(), state:c}; }
 function makeCode(){ const u8=new TextEncoder().encode(JSON.stringify(payload())); if(window.CompressionStream){ try{ return pipe(u8, new CompressionStream('deflate-raw')).then(z=>'CAMP1.'+b64u(z)); }catch(e){} } return Promise.resolve('CAMP0.'+b64u(u8)); }
 function readCode(code){ return new Promise((res,rej)=>{ const m=String(code).replace(/\s+/g,'').match(/CAMP([01])\.([A-Za-z0-9_-]+)/); if(!m) return rej(new Error('This is not a transfer code — it should start with CAMP1.'));
   let u8; try{ u8=unb64u(m[2]); }catch(e){ return rej(new Error('The code is damaged — copy it again, all of it.')); }
@@ -2025,7 +2035,7 @@ function readCode(code){ return new Promise((res,rej)=>{ const m=String(code).re
   p.then(raw=>{ const c=JSON.parse(new TextDecoder().decode(raw)); if(c.app!==APP || !c.state) throw new Error('x'); res(c); }).catch(e=>rej(e && /too old/.test(e.message) ? e : new Error('The code is incomplete or damaged — copy it again, all of it.'))); }); }
 function summary(c){ const s=c.state; return `Made ${esc(new Date(c.at).toLocaleString('en-NZ',{dateStyle:'medium', timeStyle:'short'}))}<br>${s.my.length} of our own sites · ${Object.keys(s.edits||{}).length} edited sites · ${Object.keys(s.tick||{}).length} ticks<br>${s.trips.length} trip(s) · ${s.stays.length} stay(s) · ${(s.areas||[]).length} area(s) · ${(s.routes||[]).length} route(s)${c.photos?'<br>'+c.photos.length+' photo(s)':''}`; }
 let lastCode='', PENDING=null, PREV=null;
-function restore(c){ PREV={state:clone(S)}; S=c.state; migrate(); persist(); const done=()=>{ rebuild(); renderFilters(); refreshAll(); drawAreas(); drawFc(); renderData(); toast('Restored on this device.'+(c.photos?' Photos added.':'')); };
+function restore(c){ PREV={state:clone(S)}; const keepMaps=S.offMaps, keepBk=S.bk, keepKey=S.set&&S.set.linzKey; S=c.state; migrate(); S.offMaps=keepMaps||{}; S.bk=keepBk||null; if(keepKey && !S.set.linzKey) S.set.linzKey=keepKey; persist(); const done=()=>{ rebuild(); renderFilters(); refreshAll(); drawAreas(); drawFc(); renderData(); toast('Restored on this device.'+(c.photos?' Photos added.':'')); };
   if(c.photos && c.photos.length){ Promise.all(c.photos.map(p=>pPut(p).catch(()=>null))).then(done); } else done(); }
 
 // ---------- data tab ----------
@@ -2043,7 +2053,10 @@ function renderData(){
   <h2>Restore on this device</h2><div class="btns"><button class="btn" type="button" id="dPaste">📋 Paste code</button><button class="btn ghost" type="button" id="dOpen">Open code or backup file</button></div>
   ${lab('Or paste the code here','Press and hold in the box, then Paste.','dIn')}<textarea id="dIn" rows="4" class="codebox" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="CAMP1. …"></textarea><div id="dCheck"></div>
   <div class="btns"><button class="btn dark wide" type="button" id="dRestore" disabled>Restore — replaces this device's data</button>${PREV?'<button class="btn ghost wide" type="button" id="dUndo">Undo the last restore</button>':''}</div>
-  <h2>Backup files</h2><div class="hint" id="savedAt2"></div><div class="btns"><button class="btn" type="button" id="dBack">Backup — without photos</button><button class="btn" type="button" id="dBackP">Full backup with photos</button></div><div class="hint" id="dStore"></div>
+  <h2>Backups</h2>${(()=>{ const bs=backupState(); return `<div class="card ${bs.current?'ok':hasData()?'warn':''}"><b>Last backup: ${agoTxt(bs.at)}</b>${bs.at&&!bs.current?' — you have made changes since.':''}<br>A backup file holds everything — sites, trips, walks, journal and photos. Keep it somewhere safe (OneDrive, Google Drive, or email it to yourself). To restore, open it with “Open code or backup file” above.</div>`; })()}
+  <div class="hint" id="savedAt2"></div><div class="btns"><button class="btn dark" type="button" id="dBackP">⤓ Back up now (with photos)</button><button class="btn ghost" type="button" id="dBack">Back up without photos</button></div><div class="hint" id="dStore"></div>
+  <h2>Offline maps</h2>${(()=>{ const o=Object.values(S.offMaps||{}), tiles=o.reduce((a,x)=>a+x.tiles,0), bytes=o.reduce((a,x)=>a+x.bytes,0); return canOffline()?`<div class="card">Maps are saved per trip from <b>3 · Trips → Ready for no signal</b>, using NZ Topo50 from LINZ.<br>${o.length?`Saved now: <b>${tiles.toLocaleString()}</b> map pieces (${MB(bytes)}) for ${o.length} trip${o.length>1?'s':''}.`:'No maps saved yet.'}</div>${o.length?'<div class="btns"><button class="btn red wide" type="button" id="dClearMaps">Delete all saved maps</button></div>':''}`:`<div class="card">Saving maps works in the app version on your phone — <a href="${APP_URL}">${APP_URL}</a>.</div>`; })()}
+  ${lab('LINZ access link (only if asked)','LINZ maps currently work without one. If the planner says LINZ needs an access link: open basemaps.linz.govt.nz, copy its map link (it contains api=…), and paste it here.','dLinz')}<div class="row"><input type="text" id="dLinz" value="${esc(S.set.linzKey||'')}" placeholder="Paste a LINZ link or key"><button class="btn ghost" type="button" id="dLinzOk" style="flex:0 0 auto">Save</button></div>
   <h2>Our settings</h2>${lab('Who camps','Names used on new journal entries, e.g. “Dad and Mia”.','sNames')}<input type="text" id="sNames" value="${esc(S.set.names)}">
   <div class="row"><div>${lab('Adults','Default for new trips.','sAd')}<input type="number" min="0" id="sAd" value="${esc(S.set.adults)}"></div><div>${lab('Children','Default for new trips (5–17 years).','sCh')}<input type="number" min="0" id="sCh" value="${esc(S.set.children)}"></div></div>
   ${lab('How we camp','Tent campers hide self-contained-only sites by default. Self-contained vehicle owners see them.','sVeh')}<select id="sVeh">${opt({tent:'Tent or non-self-contained vehicle', sc:'Certified self-contained vehicle'}, S.set.vehicle)}</select>
@@ -2075,8 +2088,10 @@ function renderData(){
   $('dOpen').onclick=()=>pickFile('.txt,.json', f=>handleFile(f));
   $('dRestore').onclick=()=>{ if(!PENDING) return; arm($('dRestore'), 'Tap again — this replaces all our data on this device', ()=>{ const c=PENDING; PENDING=null; restore(c); }); };
   if($('dUndo')) $('dUndo').onclick=()=>arm($('dUndo'), 'Tap again to undo the restore', ()=>{ S=PREV.state; PREV=null; migrate(); persist(); rebuild(); renderFilters(); refreshAll(); drawAreas(); renderData(); toast('Restore undone.'); });
-  $('dBack').onclick=()=>{ deliver(new Blob([JSON.stringify(payload())], {type:'application/json'}), 'NZ Camp Planner backup '+today()+'.json'); };
-  $('dBackP').onclick=()=>{ toast('Gathering photos…'); pAll().then(ph=>{ const p=payload(); p.photos=ph; deliver(new Blob([JSON.stringify(p)], {type:'application/json'}), 'NZ Camp Planner full backup '+today()+'.json'); }).catch(e=>toast('Photos could not be read: '+e.message)); };
+  $('dBack').onclick=()=>{ deliver(new Blob([JSON.stringify(payload())], {type:'application/json'}), 'NZ Camp Planner backup '+today()+'.json'); S.bk={at:Date.now(), sig:dataSig()}; persist(); renderData(); };
+  $('dBackP').onclick=backupNow;
+  const dcm=$('dClearMaps'); if(dcm) dcm.onclick=()=>arm(dcm,'Tap again — delete all saved maps',async()=>{ await clearMaps(); renderData(); toast('Saved maps deleted. Save them again before your next trip.'); });
+  $('dLinzOk').onclick=async()=>{ const v=$('dLinz').value.trim(); if(!v){ S.set.linzKey=''; persist(); addLinzLayers(); toast('LINZ link cleared.'); return; } const k=linzFromInput(v); if(!k){ $('dLinz').classList.add('miss'); toast('That doesn’t look like a LINZ link — it should contain api=…'); return; } S.set.linzKey=k; persist(); addLinzLayers(); const ok=await checkLinzAccess(); toast(ok?'LINZ link saved and working.':ok===false?'LINZ didn’t accept that link — copy a fresh one.':'Saved — it will be checked when you are online.', 6000); };
   $('sNames').onchange=e=>{ S.set.names=e.target.value; persist(); };
   $('sAd').onchange=e=>{ S.set.adults=Math.max(0,parseInt(e.target.value,10)||0); persist(); };
   $('sCh').onchange=e=>{ S.set.children=Math.max(0,parseInt(e.target.value,10)||0); persist(); };
@@ -2223,16 +2238,145 @@ function instShow(force){ if(!instWanted(force)){ if(force) toast(isStandalone()
   closeModal(); instRender(); el.classList.add('show'); }
 function instHide(){ const el=$('inst'); if(el) el.classList.remove('show'); }
 
+// ---------- NZ Topo50 and aerial photos from LINZ (CC BY 4.0) — also the maps saved for offline use ----------
+const LINZ_ATTR='NZ Topo50 and aerial imagery © <a href="https://www.linz.govt.nz/" target="_blank" rel="noopener">Toitū Te Whenua LINZ</a> (CC BY 4.0)';
+const linzKey=()=>S.set.linzKey?'?api='+encodeURIComponent(S.set.linzKey):'';
+const linzTpl=set=>'https://basemaps.linz.govt.nz/v1/tiles/'+set+'/WebMercatorQuad/{z}/{x}/{y}.webp'+linzKey();
+const LINZ_L={};
+function addLinzLayers(){
+  [['linz','NZ Topo50 (LINZ) — saves for offline','topo-raster',17],['linzair','Aerial photos (LINZ)','aerial',19]].forEach(([k,name,set,max])=>{
+    if(LINZ_L[k]){ LINZ_L[k].setUrl(linzTpl(set)); return; }
+    const l=L.tileLayer(linzTpl(set), {maxZoom:19, maxNativeZoom:max, attribution:LINZ_ATTR}); l._key=k; LINZ_L[k]=l; baseLayers[name]=l; layerCtl.addBaseLayer(l, name);
+    l.on('tileerror', ()=>{ l._errs=(l._errs||0)+1; if(l._errs===6 && navigator.onLine) checkLinzAccess(); }); });
+  if((S.base==='linz'||S.base==='linzair') && !map.hasLayer(LINZ_L[S.base])) useBase(S.base, true);
+}
+function useBase(k, quiet){ const target=LINZ_L[k]||Object.values(baseLayers).find(l=>l._key===k); if(!target || map.hasLayer(target)) return; Object.values(baseLayers).forEach(l=>{ if(map.hasLayer(l)) map.removeLayer(l); }); target.addTo(map); S.base=k; persist(); if(!quiet) toast(k==='linz'?'Map switched to NZ Topo50 — the map saved for offline use. Change it with the layers button (top right).':'Map changed.', 6000); }
+async function checkLinzAccess(){ try{ const r=await fetch(linzTpl('topo-raster').replace('{z}','10').replace('{x}','1012').replace('{y}','635'), {mode:'cors'}); if(r.status===401||r.status===403){ toast('LINZ maps need a fresh access link — paste one in 6 · Data → Offline maps.', 8000); return false; } return r.ok; }catch(e){ return null; } }
+function linzFromInput(v){ v=String(v||'').trim(); const m=v.match(/[?&]api=([A-Za-z0-9_-]+)/); if(m) return m[1]; if(/^[A-Za-z0-9_-]{16,}$/.test(v)) return v; return null; }
+window.addEventListener('offline', ()=>{ if(S.base!=='linz' && LINZ_L.linz && Object.values(S.offMaps||{}).length) useBase('linz'); });
+
+// ---------- save maps for a trip ----------
+const OFF={busy:false, cancel:false, authFail:false};
+const canOffline=()=>('caches' in window) && /^https?:$/.test(location.protocol);
+const tileKey=u=>{ const x=new URL(u); x.searchParams.delete('api'); return x.origin+x.pathname.replace(/services;key=[^/]+\//,'services/'); };
+function tileXY(lat,lon,z){ const n=2**z, lr=lat*Math.PI/180; return [Math.floor((lon+180)/360*n), Math.floor((1-Math.log(Math.tan(lr)+1/Math.cos(lr))/Math.PI)/2*n)]; }
+function addBox(set, lat, lon, rKm, z){ const dLa=rKm/111.32, dLo=rKm/(111.32*Math.cos(lat*Math.PI/180)), a=tileXY(lat+dLa, lon-dLo, z), b=tileXY(lat-dLa, lon+dLo, z); for(let x=a[0];x<=b[0];x++) for(let y=a[1];y<=b[1];y++) set.add(z+'/'+x+'/'+y); }
+function tripPlaces(t, ideas){ const pts=[], paths=[], seen=new Set(), add=(lat,lon,kind,name)=>{ const k=(+lat).toFixed(4)+','+(+lon).toFixed(4); if(seen.has(k)) return; seen.add(k); pts.push({lat:+lat, lon:+lon, kind, name}); };
+  t.days.forEach((d,i)=>{ const s=BYID[d.stay]; if(s && i<t.days.length-1) add(s.lat,s.lon,'site',s.name); if(d.park) add(d.park.lat,d.park.lon,'park',d.park.label);
+    d.walks.forEach(id=>{ const r=S.routes.find(x=>x.id===id); if(r){ const p=pathOf(r); if(p.length>1) paths.push(p); } }); });
+  if(ideas) t.list.forEach(id=>{ const s=BYID[id]; if(s) add(s.lat,s.lon,'idea',s.name); });
+  return {pts, paths}; }
+function tilePlan(t, maxZ, ideas){
+  const {pts,paths}=tripPlaces(t, ideas), set=new Set(); if(!pts.length && !paths.length) return {tiles:[], pts, paths, sig:''};
+  const all=pts.map(p=>[p.lat,p.lon]).concat(...paths), la=all.map(p=>p[0]), lo=all.map(p=>p[1]);
+  for(let z=8; z<=11; z++){ const a=tileXY(Math.max(...la)+0.05, Math.min(...lo)-0.05, z), b=tileXY(Math.min(...la)-0.05, Math.max(...lo)+0.05, z); if((b[0]-a[0]+1)*(b[1]-a[1]+1)<=160) for(let x=a[0];x<=b[0];x++) for(let y=a[1];y<=b[1];y++) set.add(z+'/'+x+'/'+y); }
+  const R={12:5, 13:3, 14:2, 15:1.2, 16:0.8};
+  for(let z=12; z<=maxZ; z++){ pts.forEach(p=>addBox(set, p.lat, p.lon, p.kind==='idea'?Math.min(R[z],1.5):R[z], z));
+    paths.forEach(path=>{ const d=cumDist(path), tot=d[d.length-1]; for(let m=0;m<=tot+1;m+=250){ const q=sampleAt(path,d,Math.min(m,tot)); addBox(set, q[0], q[1], z<=13?1.5:0.7, z); } }); }
+  const sig=maxZ+'|'+(ideas?1:0)+'|'+pts.map(p=>p.lat.toFixed(4)+','+p.lon.toFixed(4)).join(';')+'|'+paths.map(p=>p.length+':'+p[0].join(',')+':'+p[p.length-1].join(',')).join(';');
+  return {tiles:[...set], pts, paths, sig};
+}
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+async function saveMaps(t, maxZ, ideas, onProg){
+  const plan=tilePlan(t, maxZ, ideas), tpl=linzTpl('topo-raster'), c=await caches.open('offline-maps');
+  let i=0, done=0, fail=0, bytes=0, fresh=0; OFF.cancel=false; OFF.authFail=false; OFF.busy=true;
+  try{ if(navigator.storage && navigator.storage.persist) navigator.storage.persist(); }catch(e){}
+  const worker=async()=>{ while(i<plan.tiles.length && !OFF.cancel){ const [z,x,y]=plan.tiles[i++].split('/'), url=tpl.replace('{z}',z).replace('{x}',x).replace('{y}',y), key=tileKey(url);
+      try{ const hit=await c.match(key); if(hit){ done++; bytes+=+(hit.headers.get('x-size')||12000); }
+        else { const r=await fetch(url, {mode:'cors', credentials:'omit'}); if(r.status===401||r.status===403){ OFF.authFail=true; OFF.cancel=true; throw 0; } if(!r.ok) throw 0;
+          const b=await r.blob(); await c.put(key, new Response(b, {headers:{'Content-Type':r.headers.get('Content-Type')||'image/webp', 'x-size':String(b.size)}})); bytes+=b.size; done++; fresh++; await sleep(450); } }
+      catch(e){ fail++; } onProg && onProg(done, fail, plan.tiles.length, bytes); } };
+  await Promise.all(Array.from({length:5}, worker)); OFF.busy=false;   // about 10 tiles a second — well inside LINZ's fair-use limit
+  return {done, fail, fresh, total:plan.tiles.length, bytes, sig:plan.sig, cancelled:OFF.cancel && !OFF.authFail, authFail:OFF.authFail};
+}
+function mapsState(t){ const o=(S.offMaps||{})[t.id]; if(!o) return {saved:false}; const cur=tilePlan(t, o.maxZ, o.ideas); return {saved:true, o, stale:cur.sig!==o.sig, missing:cur.tiles.length}; }
+const MB=b=>b>=1048576?(b/1048576).toFixed(b>=10485760?0:1)+' MB':Math.max(1,Math.round(b/1024))+' KB';
+function saveMapsDialog(t){
+  if(!canOffline()){ showModal(`<h3>Save maps for offline use</h3><p style="font-size:13px;line-height:1.5">Saving maps works in the app version — open <a href="${APP_URL}">${APP_URL}</a> on your phone and add it to your home screen, then save the maps there. (This copy is opened as a file, which browsers don't allow to keep maps.)</p><div class="btns"><button class="btn" type="button" data-close>OK</button></div>`); return; }
+  const prev=(S.offMaps||{})[t.id]||{}; let maxZ=prev.maxZ||15, ideas=!!prev.ideas;
+  const draw=()=>{ const p=tilePlan(t, maxZ, ideas), n=p.tiles.length, est=n*14000, secs=Math.round(n/10);
+    showModal(`<h3>Save maps for “${esc(t.name)}”</h3>
+      <p style="font-size:13px;line-height:1.5">Downloads <b>NZ Topo50</b> (LINZ) around ${p.pts.filter(x=>x.kind==='site').length} campsite${p.pts.filter(x=>x.kind==='site').length===1?'':'s'}, ${p.pts.filter(x=>x.kind==='park').length} car park${p.pts.filter(x=>x.kind==='park').length===1?'':'s'} and ${p.paths.length} walk${p.paths.length===1?'':'s'}${ideas?', plus the other shortlist ideas':''}, so the map works with no signal. Do it on Wi-Fi before you leave.</p>
+      ${n?'':missHtml('Nothing to save yet', ['Choose where you are sleeping, set car parks or add walks in Day by day'])}
+      ${lab('Detail','Normal shows tracks, huts, streams and contours clearly. Extra detail adds one closer zoom level — about three times the size.','smZ')}<select id="smZ">${opt({'15':'Normal — recommended','16':'Extra detail (zoom in further)','14':'Lighter — less storage'}, String(maxZ))}</select>
+      <label class="f" style="font-weight:normal;color:var(--dark)"><input type="checkbox" id="smIdeas"${ideas?' checked':''}> Also save around the other shortlist ideas</label>
+      <div class="card">About <b>${n.toLocaleString()}</b> map pieces · roughly <b>${MB(est)}</b> · about ${secs<90?secs+' seconds':Math.round(secs/60)+' minutes'} on good Wi-Fi.${n>6000?'<br><b style="color:var(--red)">That is a lot — choose Normal or Lighter, or untick the shortlist ideas.</b>':''}</div>
+      <div id="smProg"></div>
+      <div class="btns"><button class="btn dark" type="button" id="smGo"${!n||n>9000?' disabled':''}>💾 Save maps</button><button class="btn ghost" type="button" id="smX">Close</button></div>`);
+    $('smZ').onchange=e=>{ maxZ=+e.target.value; draw(); };
+    $('smIdeas').onchange=e=>{ ideas=e.target.checked; draw(); };
+    $('smX').onclick=()=>{ if(OFF.busy){ OFF.cancel=true; } closeModal(); };
+    $('smGo').onclick=async()=>{ if(OFF.busy) return; if(navigator.onLine===false){ toast('You are offline — connect to Wi-Fi first.'); return; }
+      $('smGo').disabled=true; $('smZ').disabled=true; $('smIdeas').disabled=true; $('smX').textContent='Stop';
+      const prog=$('smProg'); prog.innerHTML='<div class="lv-bar" style="height:12px;background:#eee;border-radius:6px;overflow:hidden;margin-top:8px"><i id="smBar" style="display:block;height:100%;width:0;background:linear-gradient(90deg,#2E7D32,#D9A21B)"></i></div><div class="hint" id="smTxt">Starting…</div>';
+      const res=await saveMaps(t, maxZ, ideas, (d,f,tot,b)=>{ const bar=$('smBar'), tx=$('smTxt'); if(bar) bar.style.width=Math.round((d+f)/tot*100)+'%'; if(tx) tx.textContent=(d+f).toLocaleString()+' of '+tot.toLocaleString()+' · '+MB(b)+(f?' · '+f+' not available':''); });
+      if(res.authFail){ prog.innerHTML+=missHtml('LINZ needs an access link', ['Open basemaps.linz.govt.nz, copy the map link (it contains api=…), and paste it in 6 · Data → Offline maps.']); $('smX').textContent='Close'; return; }
+      if(res.done){ S.offMaps=S.offMaps||{}; S.offMaps[t.id]={at:Date.now(), tiles:res.done, bytes:res.bytes, maxZ, ideas, sig:res.cancelled?'partial':res.sig}; persist(); }
+      if(res.cancelled){ toast('Stopped — '+res.done.toLocaleString()+' map pieces saved so far. Save again to finish.', 6000); closeModal(); renderTrips(); return; }
+      closeModal(); if(S.base!=='linz') useBase('linz'); renderTrips();
+      toast('Maps saved: '+res.done.toLocaleString()+' pieces ('+MB(res.bytes)+')'+(res.fail?' — '+res.fail+' not available from LINZ':'')+'. They work with no signal.', 7000); };
+  };
+  draw();
+}
+async function clearMaps(){ try{ await caches.delete('offline-maps'); }catch(e){} S.offMaps={}; persist(); }
+
+// ---------- backups ----------
+function dataSig(){ const s=JSON.stringify([S.my,S.edits,S.tick,S.stays,S.trips,S.routes,S.areas,S.myTpl,S.myMeals], (k,v)=>k&&k[0]==='_'||k==='drv'?undefined:v); let h=5381; for(let i=0;i<s.length;i++) h=((h<<5)+h+s.charCodeAt(i))|0; return s.length+':'+h; }
+const hasData=()=>S.trips.length||S.stays.length||S.routes.length||S.my.length||Object.keys(S.tick).length;
+function backupState(){ const b=S.bk||{}; return {at:b.at||0, current:!!b.at && b.sig===dataSig(), days:b.at?Math.floor((Date.now()-b.at)/864e5):null}; }
+function agoTxt(ms){ if(!ms) return 'never'; const d=Math.floor((Date.now()-ms)/864e5); return d<=0?'today':d===1?'yesterday':d<30?d+' days ago':fmtDate(new Date(ms).toISOString().slice(0,10)); }
+async function backupNow(){
+  toast('Making your backup…');
+  let photos=[]; try{ photos=await pAll(); }catch(e){}
+  const p=payload(); p.photos=photos; const name='NZ Camp Planner backup '+today()+'.json';
+  deliver(new Blob([JSON.stringify(p)], {type:'application/json'}), name);
+  S.bk={at:Date.now(), sig:dataSig()}; persist(); try{ if(navigator.storage && navigator.storage.persist) navigator.storage.persist(); }catch(e){}
+  setTimeout(()=>toast(COMPACT?'Backup ready — choose “Save to Files”, Google Drive or email it to yourself.':'Backup saved to your Downloads ('+(photos.length?photos.length+' photos included':'no photos yet')+'). Keep a copy somewhere safe, e.g. OneDrive.', 7000), 600);
+  if(curTab==='trips') renderTrips(); if(curTab==='data') renderData();
+}
+// ---------- ready for no signal ----------
+function readiness(t){
+  const ms=mapsState(t), bs=backupState(), walks=[].concat(...t.days.map(d=>d.walks)).map(id=>S.routes.find(r=>r.id===id)).filter(Boolean), noEle=walks.filter(r=>!r.ele);
+  return [
+    {k:'maps', ok:ms.saved && !ms.stale, t:'Maps saved for offline', d:ms.saved?(ms.stale?'Saved '+agoTxt(ms.o.at)+', but the plan has changed since — update them (only new bits download).':ms.o.tiles.toLocaleString()+' map pieces ('+MB(ms.o.bytes)+'), saved '+agoTxt(ms.o.at)+'.'):'Not saved yet — without them the map can be blank where there is no signal.', btn:['💾 '+(ms.saved?'Update maps':'Save maps'),'maps']},
+    {k:'backup', ok:bs.current, t:'Backed up since your last changes', d:bs.at?'Last backup '+agoTxt(bs.at)+(bs.current?'.':' — you have made changes since.'):'No backup yet. Phones can lose web-app data; a backup file keeps your trips, walks, journal and photos safe.', btn:['⤓ Back up now','backup']},
+    {k:'heights', ok:!noEle.length, t:'Walk heights loaded', d:walks.length?(noEle.length?noEle.length+' walk'+(noEle.length>1?'s':'')+' still need heights (needs signal).':'All '+walks.length+' walk'+(walks.length>1?'s':'')+' ready — times, climbs and progress work offline.'):'No walks planned.', btn:noEle.length?['Load heights','heights']:null},
+    {k:'install', ok:isStandalone(), t:'Opened from the home screen', d:isStandalone()?'Using the installed app — it keeps its data and works offline.':(/^https?:$/.test(location.protocol)?'Add it to your home screen so the phone keeps its data and it opens with no signal.':'Use the web link on your phone and add it to your home screen.'), btn:isStandalone()?null:['📲 How to add it','install']},
+    {k:'sheet', ok:!!t.checks.sheet, t:'Trip sheet sent to your trusted contact', d:t.checks.sheet?'Done.':'Send the trip sheet (with car parks and your overdue time) to someone at home.', btn:['📄 Trip sheet','sheet'], tick:true}
+  ];
+}
+function readyHtml(t){ const R=readiness(t), n=R.filter(x=>x.ok).length;
+  return `<div class="ready">${R.map(x=>`<div class="rd ${x.ok?'ok':''}"><span class="rk">${x.ok?'✓':'!'}</span><div><b>${x.t}</b><div class="hint" style="margin:2px 0 0">${x.d}</div>${x.btn||x.tick?`<div class="row" style="margin-top:6px;gap:6px">${x.btn?`<button class="btn ${x.ok?'ghost':''}" type="button" data-ready="${x.btn[1]}" style="flex:0 0 auto">${x.btn[0]}</button>`:''}${x.tick?`<label class="f" style="font-weight:normal;color:var(--dark);margin:0"><input type="checkbox" data-chk="sheet"${t.checks.sheet?' checked':''}> Sent</label>`:''}</div>`:''}</div></div>`).join('')}</div>`; }
+function bindReady(B, t){ B.querySelectorAll('[data-ready]').forEach(b=>b.onclick=()=>{ const a=b.dataset.ready;
+  if(a==='maps') saveMapsDialog(t); else if(a==='backup') backupNow(); else if(a==='install') instShow(true); else if(a==='sheet') showSheet(t);
+  else if(a==='heights'){ [].concat(...t.days.map(d=>d.walks)).map(id=>S.routes.find(r=>r.id===id)).filter(r=>r&&!r.ele).forEach(r=>fetchEle(r)); toast('Loading heights…'); setTimeout(()=>{ if(curTab==='trips') renderTrips(); }, 4000); } }); }
+// ---------- reminders: a trip is coming up, or it's been a while since a backup ----------
+function nudge(){
+  if($('modal').classList.contains('show') || ($('inst') && $('inst').classList.contains('show'))) return false;
+  const td=today(), soon=S.trips.filter(t=>t.from && t.from>=td && nights(td,t.from)<=4).sort((a,b)=>a.from.localeCompare(b.from))[0], snoozeKey=KEY+':nudge';
+  let sn={}; try{ sn=JSON.parse(localStorage.getItem(snoozeKey)||'{}'); }catch(e){}
+  const show=(id, html, actions)=>{ if(sn[id] && Date.now()<sn[id]) return false; let el=$('nudge'); if(!el){ el=document.createElement('div'); el.id='nudge'; el.setAttribute('role','dialog'); document.body.appendChild(el); }
+    el.innerHTML=`<div class="inst-card">${html}<div class="ibt">${actions.map(a=>`<button class="btn ${a[2]||'ghost'}" type="button" data-nu="${a[0]}">${a[1]}</button>`).join('')}</div></div><button type="button" class="ix" aria-label="Close" data-nu="later">✕</button>`; el.classList.add('show');
+    el.querySelectorAll('[data-nu]').forEach(b=>b.onclick=()=>{ const a=b.dataset.nu; el.classList.remove('show'); if(a==='later'){ sn[id]=Date.now()+(id.startsWith('trip')?864e5:7*864e5); try{ localStorage.setItem(snoozeKey, JSON.stringify(sn)); }catch(e){} }
+      else if(a==='ready'){ S.cur=soon.id; persist(); TRIP_OPEN.add('ready'); openTab('trips'); setTimeout(()=>{ const r=document.querySelector('[data-sec="ready"]'); if(r) r.scrollIntoView({block:'start'}); }, 80); }
+      else if(a==='backup') backupNow(); }); return true; };
+  if(soon){ const R=readiness(soon), todo=R.filter(x=>!x.ok && (x.k==='maps'||x.k==='backup')); const d=nights(td, soon.from);
+    if(todo.length && show('trip:'+soon.id, `<div class="ih"><svg width="34" height="34"><use href="#logo"/></svg><b>${esc(soon.name)} ${d===0?'starts today':d===1?'starts tomorrow':'is in '+d+' days'}</b></div><div class="ib">Before you lose signal: ${todo.map(x=>x.k==='maps'?'<b>save the maps</b>':'<b>back up</b>').join(' and ')}.</div>`, [['ready','Get ready','dark'],['later','Later']])) return true; }
+  const bs=backupState(); if(hasData() && !bs.current && (!bs.at || bs.days>=30) && S.trips.length+S.stays.length+S.routes.length>=2)
+    return show('backup', `<div class="ih"><svg width="34" height="34"><use href="#logo"/></svg><b>${bs.at?'Time for a backup':'Back up your plans'}</b></div><div class="ib">${bs.at?'Your last backup was '+agoTxt(bs.at)+'.':'You have trips, walks or a journal saved only on this device.'} A backup file keeps them safe if the phone is lost or its data is cleared.</div>`, [['backup','⤓ Back up now','dark'],['later','Not now']]);
+  return false;
+}
+
 // ---------- boot ----------
 function boot(){
-  slopeZoom(); rebuild(); renderFilters(); attrib(); refresh(); renderSets(); renderMine(); srcStat(); drawAreas(); drawFc(); savedNote(); applyMode();
+  addLinzLayers(); slopeZoom(); rebuild(); renderFilters(); attrib(); refresh(); renderSets(); renderMine(); srcStat(); drawAreas(); drawFc(); savedNote(); applyMode();
   if(!COMPACT) openTab(S.tab||'find'); else curTab=S.tab||'find';
   // The built-in snapshot means the map works straight away; only DOC (fast) refreshes quietly in the background when old.
   const stale=iso=>!iso || (Date.now()-new Date(iso).getTime())>30*864e5;
   if(navigator.onLine!==false && stale(DOC.at)) loadDoc(true);
   if(navigator.onLine!==false && !OSM.sites.length) loadOsm('all', true);
   if(!S.seen) setTimeout(showWelcome, 500);
-  else if(instWanted() && (isPhoneish() || INST.evt)) setTimeout(()=>{ if(!$('modal').classList.contains('show')) instShow(); }, 1500);
+  else setTimeout(()=>{ if($('modal').classList.contains('show')) return; if(!nudge() && instWanted() && (isPhoneish() || INST.evt)) instShow(); }, 1500);
 }
 // Built-in snapshot: used whenever this browser has no saved copy yet (first open, new phone, after a wipe).
 function useSeed(){
