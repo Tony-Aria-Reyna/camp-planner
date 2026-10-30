@@ -9,6 +9,7 @@ Find New Zealand campsites, plan walks the kids can manage, and turn it all into
 **Find campsites**
 - About 2,050 campsites from DOC, Auckland Council regional parks, council open data, LINZ and OpenStreetMap
 - Council freedom camping rules and campgrounds from 23 councils' published map data, plus LINZ's camping areas
+- Auckland and Northland: Auckland Council's 20 restricted freedom camping sites, Whangārei's bylaw sites, the Far North's approved sites, district-wide rules for Auckland, Kaipara, Whangārei and the Far North, and operator details for 22 holiday parks
 - Every site shows its district, nearest town and links to that council's website and camping rules; thin records have a one-tap look-up
 - Filter by price, facilities (toilets, showers, kitchen, power…), setting (beach, lake, river, bush), tents, dogs, parking and distance; ◎ Near me
 - DOC freedom camping areas: 63 places you can camp under conditions (with the outline of where to pitch, the rules, max nights and the DOC notice PDF) and 224 areas where it is prohibited, shown on the map
