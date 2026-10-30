@@ -86,6 +86,8 @@
   #map { flex:1; background:#d9d9d9; }
   .cm { width:18px; height:18px; border-radius:50%; background:#fff; border:3px solid var(--c); box-shadow:0 1px 3px rgba(0,0,0,.55); font:bold 11px/12px Arial; color:var(--dark); text-align:center; box-sizing:border-box; }
   .cm.been { background:var(--gold); }
+  .fcm { width:18px; height:18px; border-radius:50%; border:2px solid #fff; box-shadow:0 1px 3px rgba(0,0,0,.55); font:11px/14px Arial; text-align:center; box-sizing:border-box; background:#B00000; color:#fff; }
+  .fcm.sc { background:#fff; border:3px solid #E65100; font-size:9px; line-height:12px; opacity:.85; }
   .cm.shut { border-style:dashed; opacity:.6; }
   .cm.sel { width:24px; height:24px; margin:-3px 0 0 -3px; box-shadow:0 0 0 3px var(--gold), 0 1px 4px rgba(0,0,0,.6); }
   .cm.draft { background:var(--gold); border-color:var(--dark); width:24px; height:24px; margin:-3px 0 0 -3px; cursor:move; }
@@ -738,8 +740,15 @@ function drawSites(){
     m.bindPopup(()=>popupHtml(s), COMPACT ? {maxWidth:Math.min(320, innerWidth-84), minWidth:Math.min(240, innerWidth-84), autoPanPaddingTopLeft:[66,56], autoPanPaddingBottomRight:[12,16]} : {maxWidth:330, autoPanPaddingTopLeft:[150,70], autoPanPaddingBottomRight:[10,20]}); m._sid=s.id;
     m.addTo(siteLayer); MK[s.id]=m;
   });
-  labelVis();
+  fcMarks(); labelVis();
 }
+// a locator and name for every DOC freedom camping outline that has no campsite marker showing (prohibited areas, or areas your filters hide)
+const fcMkLayer=L.layerGroup().addTo(map);
+function fcMarks(){ fcMkLayer.clearLayers(); if(typeof fcOn!=='function' || !fcOn() || map.getZoom()<9) return; const shown=new Set(FILTERED.map(s=>s.id)), bb=map.getBounds().pad(0.4);
+  FC.areas.forEach(a=>{ if(!a.ctr || (!a.ban && shown.has('f:'+a.id)) || !bb.contains(a.ctr)) return; const R=a.ban?null:fcRule(a);
+    const m=L.marker(a.ctr, {icon:L.divIcon({className:'', html:`<div class="fcm${a.ban?'':' sc'}">${a.ban?'⛔':'🚐'}</div>`, iconSize:[18,18], iconAnchor:[9,9]}), keyboard:false});
+    if(S.set.labels) m.bindTooltip(a.name+(a.ban?' — no camping':R.sc==='only'?' — self-contained only':' — hidden by your filters'), {permanent:true, direction:'right', offset:[8,0], className:'lbl'});
+    m.bindPopup(()=>fcPopup(a), {maxWidth:COMPACT?Math.min(320, innerWidth-84):330}); m.addTo(fcMkLayer); }); }
 // redraw markers for the new view — but never while a popup is open (its auto-pan would otherwise remove it)
 const popupOpen=()=>!!(map._popup && map.hasLayer(map._popup));
 let mvT=null, mvPending=false; map.on('moveend zoomend', ()=>{ clearTimeout(mvT); mvT=setTimeout(()=>{ if(FILTERED.length>350){ if(popupOpen()) mvPending=true; else drawSites(); } else labelVis(); }, 120); });
@@ -1025,6 +1034,7 @@ function slopeBits(r){
 }
 function slopeZoom(){ map.getContainer().classList.toggle('hide-slope', map.getZoom()<14); map.getContainer().classList.toggle('hide-km', map.getZoom()<13); }
 map.on('zoomend', slopeZoom);
+let fcmT=null; map.on('moveend', ()=>{ clearTimeout(fcmT); fcmT=setTimeout(()=>{ if(!popupOpen()) fcMarks(); }, 250); });
 function drawRoutes(){
   routeLayer.clearLayers(); routeEditLayer.clearLayers();
   S.routes.forEach(r=>{ if(RT && RT.id===r.id) return; const path=pathOf(r); if(path.length<2) return;
@@ -1987,7 +1997,7 @@ function fcPopup(a){ const R=fcRule(a), sid='f:'+a.id, inTrip=trip()&&trip().lis
     <div class="k" style="margin-top:4px">${a.area?'About '+(a.area>=10000?(a.area/10000).toFixed(1)+' ha':a.area.toLocaleString()+' m²')+' · ':''}${a.notice?'Notice '+esc(a.notice)+' · ':''}${a.office?'DOC '+esc(a.office):''}${a.phone?' · <a href="tel:'+esc(a.phone.replace(/[^\d+]/g,''))+'">'+esc(a.phone)+'</a>':''}</div>
     <div class="b">${a.pdf?`<a href="${esc(a.pdf)}" target="_blank" rel="noopener">DOC notice (PDF)</a>`:''}${a.ban?'':`<button type="button" data-fcsite="${sid}">${inTrip?'✓ On trip':'＋ Shortlist'}</button><button type="button" class="g" data-fcdet="${sid}">Details</button>`}<a class="g" href="https://www.google.com/maps/dir/?api=1&destination=${a.ctr?a.ctr[0]+','+a.ctr[1]:''}" target="_blank" rel="noopener">Directions</a></div>
     <div class="k" style="margin-top:4px">Check the notice and any signs on site before you camp.</div></div>`; }
-function drawFc(){ fcLayer.clearLayers(); if(!fcOn()){ map.removeLayer(fcLayer); return; }
+function drawFc(){ fcLayer.clearLayers(); fcMarks(); if(!fcOn()){ map.removeLayer(fcLayer); return; }
   FC.areas.forEach(a=>{ const sty=a.ban?{color:'#B00000', weight:1.5, fillColor:'#B00000', fillOpacity:0.22}:{color:'#E65100', weight:2.5, dashArray:'5 4', fillColor:'#7CB342', fillOpacity:0.4};
     const sh=a.rings ? L.polygon(a.rings, sty) : L.circle(a.pt, Object.assign({radius:200}, sty)); sh._fc=a.id;
     sh.bindPopup(()=>fcPopup(a), {maxWidth:COMPACT?Math.min(320, innerWidth-84):330}); sh.on('click', e=>{ if(mode){ map.fire('click', e); } }); sh.addTo(fcLayer); });
