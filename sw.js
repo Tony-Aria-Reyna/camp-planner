@@ -2,7 +2,7 @@
 // The app and Leaflet are kept for offline use. Map tiles you have looked at are kept (up to ~2,500), and maps saved with
 // "Save maps for this trip" (NZ Topo50 from LINZ, CC BY 4.0) are kept in their own store until you clear them.
 // A missing or error page is never stored, so a moved or broken web address can't replace the working copy.
-const VERSION = 'nzcamp-2026-10-30e';
+const VERSION = 'nzcamp-2026-10-30f';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png',
   'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css',
   'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js',
@@ -30,7 +30,7 @@ self.addEventListener('fetch', e => {
   const url = new URL(req.url);
   // the app page: newest copy when online and the page is good; otherwise the saved copy
   if (req.mode === 'navigate' || (url.origin === location.origin && /(\/|index\.html)$/.test(url.pathname))) {
-    e.respondWith(fetch(req).then(r => {
+    e.respondWith(fetch(req.url, { cache: 'no-store', credentials: 'same-origin' }).then(r => {
       if (r.ok) { const cp = r.clone(); caches.open(VERSION).then(c => c.put('index.html', cp)); return r; }
       return caches.match('index.html').then(c => c || r);
     }).catch(() => caches.match('index.html').then(r => r || caches.match('./'))));
