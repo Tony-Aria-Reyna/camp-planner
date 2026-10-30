@@ -7,7 +7,9 @@ Find New Zealand campsites, plan walks the kids can manage, and turn it all into
 ## What it does
 
 **Find campsites**
-- 1,758 campsites from DOC, Auckland Council regional parks and OpenStreetMap
+- About 2,050 campsites from DOC, Auckland Council regional parks, council open data, LINZ and OpenStreetMap
+- Council freedom camping rules and campgrounds from 23 councils' published map data, plus LINZ's camping areas
+- Every site shows its district, nearest town and links to that council's website and camping rules; thin records have a one-tap look-up
 - Filter by price, facilities (toilets, showers, kitchen, power…), setting (beach, lake, river, bush), tents, dogs, parking and distance; ◎ Near me
 - DOC freedom camping areas: 63 places you can camp under conditions (with the outline of where to pitch, the rules, max nights and the DOC notice PDF) and 224 areas where it is prohibited, shown on the map
 - Tick sites ✓ Been, ★ Favourite or ⚑ To try; add your own sites
@@ -41,7 +43,7 @@ Everything you enter stays on your own device. Nobody can see anyone else's trip
 
 ## Data
 
-Campsites and freedom camping areas: Crown Copyright, Department of Conservation Te Papa Atawhai (CC BY 4.0); Auckland Council website; © OpenStreetMap contributors (ODbL). Maps: NZ Topo50 and aerial imagery © Toitū Te Whenua LINZ (CC BY 4.0); OpenTopoMap, Esri, OpenStreetMap. Heights: Copernicus via Open-Meteo. Routing: FOSSGIS / OpenStreetMap.
+Campsites and freedom camping areas: Crown Copyright, Department of Conservation Te Papa Atawhai (CC BY 4.0); council open data (Gisborne, Waikato LASS, Thames-Coromandel, Whakatāne, Taupō, Rotorua, Kawerau, Central Hawke's Bay, New Plymouth, Manawatū, Tararua, Porirua, Nelson, Marlborough, Kaikōura, Hurunui, Christchurch, Environment Canterbury, Mackenzie, Waitaki, Dunedin, Queenstown Lakes); Toitū Te Whenua LINZ; Stats NZ boundaries (CC BY 4.0); Auckland Council website; © OpenStreetMap contributors (ODbL). Maps: NZ Topo50 and aerial imagery © Toitū Te Whenua LINZ (CC BY 4.0); OpenTopoMap, Esri, OpenStreetMap. Heights: Copernicus via Open-Meteo. Routing: FOSSGIS / OpenStreetMap.
 
 Times, grades and campsite details are a guide — check DOC or council alerts and the forecast before you go. Emergency: 111.
 
