@@ -9,6 +9,7 @@ Find New Zealand campsites, plan walks the kids can manage, and turn it all into
 **Find campsites**
 - 1,758 campsites from DOC, Auckland Council regional parks and OpenStreetMap
 - Filter by price, facilities (toilets, showers, kitchen, power…), setting (beach, lake, river, bush), tents, dogs, parking and distance; ◎ Near me
+- DOC freedom camping areas: 63 places you can camp under conditions (with the outline of where to pitch, the rules, max nights and the DOC notice PDF) and 224 areas where it is prohibited, shown on the map
 - Tick sites ✓ Been, ★ Favourite or ⚑ To try; add your own sites
 
 **Plan walks** (5 · Routes)
@@ -40,7 +41,7 @@ Everything you enter stays on your own device. Nobody can see anyone else's trip
 
 ## Data
 
-Campsites: Crown Copyright, Department of Conservation Te Papa Atawhai (CC BY 4.0); Auckland Council website; © OpenStreetMap contributors (ODbL). Maps: NZ Topo50 and aerial imagery © Toitū Te Whenua LINZ (CC BY 4.0); OpenTopoMap, Esri, OpenStreetMap. Heights: Copernicus via Open-Meteo. Routing: FOSSGIS / OpenStreetMap.
+Campsites and freedom camping areas: Crown Copyright, Department of Conservation Te Papa Atawhai (CC BY 4.0); Auckland Council website; © OpenStreetMap contributors (ODbL). Maps: NZ Topo50 and aerial imagery © Toitū Te Whenua LINZ (CC BY 4.0); OpenTopoMap, Esri, OpenStreetMap. Heights: Copernicus via Open-Meteo. Routing: FOSSGIS / OpenStreetMap.
 
 Times, grades and campsite details are a guide — check DOC or council alerts and the forecast before you go. Emergency: 111.
 
