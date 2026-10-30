@@ -13,6 +13,7 @@ Find New Zealand campsites, plan walks the kids can manage, and turn it all into
 - Every site shows its district, nearest town and links to that council's website and camping rules; thin records have a one-tap look-up
 - Filter by price, facilities (toilets, showers, kitchen, power…), setting (beach, lake, river, bush), tents, dogs, parking and distance; ◎ Near me
 - DOC freedom camping areas: 63 places you can camp under conditions (with the outline of where to pitch, the rules, max nights and the DOC notice PDF) and 224 areas where it is prohibited, shown on the map
+- 929 DOC huts (basic/bivvy, standard, serviced, alpine and Great Walk) with bunks, facilities, walk time from the road end, booking and the DOC page — square markers
 - Tick sites ✓ Been, ★ Favourite or ⚑ To try; add your own sites
 
 **Plan walks** (5 · Routes)
