@@ -2,7 +2,7 @@
 // The app and Leaflet are kept for offline use. Map tiles you have looked at are kept (up to ~2,500), and maps saved with
 // LINZ maps (NZ street map, Topo50, aerial photos — CC BY 4.0) are saved by the app itself in IndexedDB.
 // A missing or error page is never stored, so a moved or broken web address can't replace the working copy.
-const VERSION = 'nzcamp-2026-11-19d';
+const VERSION = 'nzcamp-2026-11-19e';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png',
   'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css',
   'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js',
@@ -15,8 +15,9 @@ const TILE_MAX = 2500;
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(VERSION).then(c => Promise.all(SHELL.map(u => c.add(u).catch(() => null)))).then(() => self.skipWaiting()));
 });
+// Your other apps share this web address (and its storage), so only this app's own old copies are ever removed.
 self.addEventListener('activate', e => {
-  e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => !KEEP.includes(k)).map(k => caches.delete(k)))).then(() => self.clients.claim()));
+  e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k.startsWith('nzcamp-') && !KEEP.includes(k)).map(k => caches.delete(k)))).then(() => self.clients.claim()));
 });
 let trimming = false;
 async function trimTiles() {
